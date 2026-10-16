@@ -1,20 +1,24 @@
 const container = document.getElementById('container');
 const statusMessage = document.getElementById('status');
 
+
 function setStatus(message = '') {
   if (statusMessage) {
     statusMessage.textContent = message;
   }
 }
 
+
 function makeField(labelText, value, type = 'text') {
   const label = document.createElement('label');
   label.textContent = labelText;
+
 
   const input = document.createElement(type === 'select' ? 'select' : 'input');
   if (type !== 'select') {
     input.type = type;
   }
+
 
   if (type === 'select') {
     ['studies', 'college_project', 'personal', 'fun', 'other'].forEach((category) => {
@@ -25,13 +29,16 @@ function makeField(labelText, value, type = 'text') {
     });
   }
 
+
   input.value = value ?? '';
   label.append(input);
   return { label, input };
 }
 
+
 function toDateTimeLocal(value) {
   if (!value) return '';
+
 
   if (/[zZ]|[+-]\d{2}:\d{2}$/.test(value)) {
     const date = new Date(value);
@@ -41,29 +48,37 @@ function toDateTimeLocal(value) {
     }
   }
 
+
   return value.slice(0, 16);
 }
+
 
 function renderTask(task, index) {
   const card = document.createElement('article');
   card.className = 'task-card';
 
+
   const name = document.createElement('div');
-  name.textContent = task.task_name ?? task.name ?? '';
+  name.textContent = task.task_name;
+
 
   const deadline = document.createElement('div');
   deadline.textContent = `Deadline: ${task.deadline ?? ''}`;
 
+
   const category = document.createElement('div');
   category.textContent = `Category: ${task.category ?? ''}`;
 
+
   const actions = document.createElement('div');
   actions.className = 'task-actions';
+
 
   const editButton = document.createElement('button');
   editButton.type = 'button';
   editButton.textContent = 'Edit';
   editButton.addEventListener('click', () => renderEditor(card, task, index));
+
 
   const deleteButton = document.createElement('button');
   deleteButton.type = 'button';
@@ -72,9 +87,10 @@ function renderTask(task, index) {
     deleteButton.disabled = true;
     setStatus('');
 
+
     try {
       const response = await fetch(
-        `http://localhost:3000/delete/${encodeURIComponent(index)}`,
+        `http://localhost:3000/delete/${encodeURIComponent(task.task_name)}`,
         { method: 'DELETE' },
       );
       if (!response.ok) {
@@ -88,15 +104,18 @@ function renderTask(task, index) {
     }
   });
 
+
   actions.append(editButton, deleteButton);
   card.append(name, deadline, category, actions);
   container.append(card);
 }
 
+
 function renderEditor(card, task, index) {
   card.replaceChildren();
 
-  const nameField = makeField('Task name', task.task_name ?? task.name ?? '');
+
+  const nameField = makeField('Task name', task.task_name);
   const deadlineField = makeField(
     'Deadline',
     toDateTimeLocal(task.deadline),
@@ -105,6 +124,7 @@ function renderEditor(card, task, index) {
   const categoryField = makeField('Category', task.category ?? '', 'select');
   const actions = document.createElement('div');
   actions.className = 'task-actions';
+
 
   const saveButton = document.createElement('button');
   saveButton.type = 'button';
@@ -116,18 +136,20 @@ function renderEditor(card, task, index) {
       category: categoryField.input.value,
     };
 
+
     if (!updatedTask.task_name || !updatedTask.deadline || !updatedTask.category) {
       setStatus('Please complete all task fields.');
       return;
     }
 
+
     saveButton.disabled = true;
     setStatus('');
 
+
     try {
       const response = await fetch(
-        `http://localhost:3000/update/${encodeURIComponent(index)}`,
-        {
+        `http://localhost:3000/update/${encodeURIComponent(updatedTask.task_name+"+"+task.task_name)}`,{
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updatedTask),
@@ -136,6 +158,7 @@ function renderEditor(card, task, index) {
       if (!response.ok) {
         throw new Error(`Update failed (${response.status})`);
       }
+
 
       await fetchData();
       setStatus('Task updated.');
@@ -146,14 +169,17 @@ function renderEditor(card, task, index) {
     }
   });
 
+
   const cancelButton = document.createElement('button');
   cancelButton.type = 'button';
   cancelButton.textContent = 'Cancel';
   cancelButton.addEventListener('click', () => fetchData());
 
+
   actions.append(saveButton, cancelButton);
   card.append(nameField.label, deadlineField.label, categoryField.label, actions);
 }
+
 
 async function fetchData() {
   if (!container) {
@@ -161,16 +187,19 @@ async function fetchData() {
     return;
   }
 
+
   try {
     const response = await fetch('http://localhost:3000/all-task');
     if (!response.ok) {
       throw new Error(`Could not load tasks (${response.status})`);
     }
 
+
     const result = await response.json();
     if (!Array.isArray(result)) {
       throw new Error('The task response was not a list.');
     }
+
 
     container.replaceChildren();
     result.forEach((taskData, index) => {
@@ -182,5 +211,6 @@ async function fetchData() {
     setStatus('Could not load tasks. Check that the backend is running.');
   }
 }
+
 
 fetchData();
